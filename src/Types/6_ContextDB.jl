@@ -1,8 +1,9 @@
 ## ------------------------------------------------------------------
 struct ContextDB
-    data::Dict{UInt, Entry}
+    data::OrderedDict{UInt, Entry}
     extras::Dict
-    ContextDB() = new(Dict(), Dict())
+    ContextDB(data, extras) = new(data, extras)
+    ContextDB() = new(OrderedDict(), Dict())
 end
 
 ## ------------------------------------------------------------------

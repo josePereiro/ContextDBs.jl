@@ -6,18 +6,6 @@ _check_error(msg::String, v, allowed::Vector) = error(
 )
 
 ## ------------------------------------------------------------------
-# kw vec interface
-_datkey(k::String) = k
-_datkey(p::Pair) = first(p)
-
-_datval(s::String) = s
-_datval(p::Pair) = last(p)
-_datval(p) = p
-
-_datdict(vals::Vector) = Dict(_datkey(v) => _datval(v) for v in vals)
-_datoddict(vals::Vector) = OrderedDict(_datkey(v) => _datval(v) for v in vals)
-
-## ------------------------------------------------------------------
 function _check_unique_keys(vals)
     length(Set(_datkey(val)::String for val in vals)) == length(vals) || error("Context/Query duplicated keys")
     return nothing

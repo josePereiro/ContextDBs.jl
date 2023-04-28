@@ -65,108 +65,111 @@ haskey(c::Context, k::String) = haskey(c.vals, k)
 import Base.empty!
 empty!(c::Context) = empty!(c.vals)
 
-## ------------------------------------------------------------------
-# INPUT
-## ------------------------------------------------------------------
-function set!(c::Context, ds...; kwds...) 
-    for d in ds
-        _check_context(d)
-        setindex!(c.vals, _datval(d), _datkey(d))
-    end
-    for (k, v) in kwds
-        _check_context_val(v)
-        setindex!(c.vals, v, string(k))
-    end
-    return c
-end
+# ## ------------------------------------------------------------------
+# # INPUT
+# ## ------------------------------------------------------------------
+# function set!(c::Context, ds...; kwds...) 
+#     for d in ds
+#         _check_context(d)
+#         setindex!(c.vals, _datval(d), _datkey(d))
+#     end
+#     for (k, v) in kwds
+#         _check_context_val(v)
+#         setindex!(c.vals, v, string(k))
+#     end
+#     return c
+# end
 
-## ------------------------------------------------------------------
-import Base.push!
-function push!(c::Context, ds...; kwds...)
-    for col in [ds, kwds]
-        for d in col
-            k = string(_datkey(d))
-            haskey(c, k) && error("Pushing existing key is not allowed, key '$k'. See set!")
-        end
-    end
-    set!(c, ds...; kwds...)
-    return c
-end
+# ## ------------------------------------------------------------------
+# import Base.push!
+# function push!(c::Context, ds...; kwds...)
+#     for col in [ds, kwds]
+#         for d in col
+#             k = string(_datkey(d))
+#             haskey(c, k) && error("Pushing existing key is not allowed, key '$k'. See upcontext!")
+#         end
+#     end
+#     set!(c, ds...; kwds...)
+#     return c
+# end
 
-## ------------------------------------------------------------------
-import Base.Dict
-Dict(c::Context) = Dict(c.vals)
+# ## ------------------------------------------------------------------
+# import Base.Dict
+# Dict(c::Context) = Dict(c.vals)
 
-## ------------------------------------------------------------------
-# CONTRUCTORS
-## ------------------------------------------------------------------
-Context(c::Context) = c
-# Context(q::Query) = Context(q.vals; __checktype = true, __checkunique = false)
+# import OrderedCollections.OrderedDict
+# OrderedDict(c::Context) = OrderedDict(c.vals)
 
-## ------------------------------------------------------------------
-# UTILS
-## ------------------------------------------------------------------
-function _hash_vector(c::Context)
-    vec = [hash(val) for val in c.vals]
-    sort!(vec)
-    return vec
-end
+# ## ------------------------------------------------------------------
+# # CONTRUCTORS
+# ## ------------------------------------------------------------------
+# Context(c::Context) = c
+# # Context(q::Query) = Context(q.vals; __checktype = true, __checkunique = false)
 
-function _find_key(c::Context, k0::String)
-    for (i, k) in enumerate(keys(c.vals))
-        k == k0 && return i
-    end
-    return nothing
-end
+# ## ------------------------------------------------------------------
+# # UTILS
+# ## ------------------------------------------------------------------
+# function _hash_vector(c::Context)
+#     vec = [hash(val) for val in c.vals]
+#     sort!(vec)
+#     return vec
+# end
 
-function _find_key_err(c::Context, k0)
-    i = _find_key(c, k0)
-    isnothing(i) && error("Context key not found, key: ", k0)
-    return i
-end
+# function _find_key(c::Context, k0::String)
+#     for (i, k) in enumerate(keys(c.vals))
+#         k == k0 && return i
+#     end
+#     return nothing
+# end
 
-## ------------------------------------------------------------------
-# CLEAR
-## ------------------------------------------------------------------
+# function _find_key_err(c::Context, k0)
+#     i = _find_key(c, k0)
+#     isnothing(i) && error("Context key not found, key: ", k0)
+#     return i
+# end
 
-function _clearcontext!(c::Context, r::AbstractArray)
-    ks_ = collect(keys(c.vals))[r]
-    foreach(ks_) do k
-        delete!(c.vals, k)
-    end
-    return c
-end
+# ## ------------------------------------------------------------------
+# # CLEAR
+# ## ------------------------------------------------------------------
 
-clearcontext!(c::Context) = (empty!(c.vals); c)
-clearcontext!(c::Context, ::Colon) = clearcontext!(c)
+# function _clearcontext!(c::Context, r::AbstractArray)
+#     ks_ = collect(keys(c.vals))[r]
+#     foreach(ks_) do k
+#         delete!(c.vals, k)
+#     end
+#     return c
+# end
 
-function clearcontext!(c::Context, k::String, offset::Int = 0) 
-    i = _find_key_err(c, k) + offset
-    _clearcontext!(c, [i])
-end
+# clearcontext!(c::Context) = (empty!(c.vals); c)
+# clearcontext!(c::Context, ::Colon) = clearcontext!(c)
 
-# k:(end + offset)
-function clearcontext!(c::Context, k::String, ::Colon, offset::Int = 0)
-    r = _find_key_err(c, k):(length(c.vals) + offset)
-    _clearcontext!(c, r)
-end
+# function clearcontext!(c::Context, k::String, offset::Int = 0) 
+#     i = _find_key_err(c, k) + offset
+#     _clearcontext!(c, [i])
+# end
 
-# (k + offset):(end + offset)
-function clearcontext!(c::Context, k::String, offset0::Int, ::Colon, offset1::Int = 0)
-    r = (_find_key_err(c, k) + offset0):(length(c.vals) + offset1)
-    _clearcontext!(c, r)
-end
+# # k:(end + offset)
+# function clearcontext!(c::Context, k::String, ::Colon, offset::Int = 0)
+#     r = _find_key_err(c, k):(length(c.vals) + offset)
+#     _clearcontext!(c, r)
+# end
 
-# (1 + offset):(end + offset)
-function clearcontext!(c::Context, offset0::Int, ::Colon, offset1::Int)
-    r = (1 + offset0):(length(c.vals) + offset1)
-    _clearcontext!(c, r)
-end
+# # (k + offset):(end + offset)
+# function clearcontext!(c::Context, k::String, offset0::Int, ::Colon, offset1::Int = 0)
+#     r = (_find_key_err(c, k) + offset0):(length(c.vals) + offset1)
+#     _clearcontext!(c, r)
+# end
 
-# 1:(k + offset)
-function clearcontext!(c::Context, ::Colon, k::String, offset::Int = 0)
-    r = 1:(_find_key_err(c, k) + offset)
-    _clearcontext!(c, r)
-end
+# # (1 + offset):(end + offset)
+# function clearcontext!(c::Context, offset0::Int, ::Colon, offset1::Int)
+#     r = (1 + offset0):(length(c.vals) + offset1)
+#     _clearcontext!(c, r)
+# end
 
-## ------------------------------------------------------------------
+# # 1:(k + offset)
+# function clearcontext!(c::Context, ::Colon, k::String, offset::Int = 0)
+#     r = 1:(_find_key_err(c, k) + offset)
+#     _clearcontext!(c, r)
+# end
+
+# ## ------------------------------------------------------------------

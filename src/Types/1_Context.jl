@@ -3,7 +3,7 @@
 struct Context
     vals::OrderedDict{String, Any}
 
-    function Context(vals::OrderedDict; __checktype = true)
+    function Context(vals::AbstractDict; __checktype = true)
         __checktype && foreach(_check_context, vals) # check
         return new(vals)
     end
