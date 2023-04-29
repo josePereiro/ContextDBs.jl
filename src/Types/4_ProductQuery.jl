@@ -9,11 +9,4 @@ struct ProductQuery
         end
         return new(qs)
     end
-    ProductQuery(q, qs...) = ProductQuery([q, qs...])
-end
-
-## ------------------------------------------------------------------
-import Base.show
-function show(io::IO, ::ProductQuery)
-    println(io, "ProductQuery")
 end

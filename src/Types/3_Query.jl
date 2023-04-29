@@ -1,7 +1,6 @@
 ## ------------------------------------------------------------------
 struct Query
     vals::Dict
-    
     function Query(vals::AbstractDict; __checktype = true)
         __checktype && foreach(_check_query, vals) # check
         return new(vals)
@@ -10,6 +9,4 @@ struct Query
         __checkunique && _check_unique_keys(vals)
         return Query(_datdict(vals); __checktype)
     end
-
-    Query(val, vals...) = Query([val, vals...])
 end

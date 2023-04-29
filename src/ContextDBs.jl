@@ -28,6 +28,8 @@ module ContextDBs
     include("Base/entry.jl")
     include("Base/exportall.jl")
     include("Base/kv_interface.jl")
+    include("Base/productquery.jl")
+    include("Base/query.jl")
     include("Base/utils.jl")
 
     #! include Global

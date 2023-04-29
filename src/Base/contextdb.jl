@@ -5,14 +5,11 @@ import Base.getindex
 getindex(db::ContextDB, i::UInt64) = db.data[i]
 getindex(db::ContextDB, i) = db.data.vals[i]
 
-import Base.lastindex
-lastindex(db::ContextDB) = lastindex(db.data.vals)
+# Error version
+getindex(db::ContextDB, ::typeof(!), k::String) = [obj[k] for (h, obj) in db.data]
 
-import Base.firstindex
-firstindex(db::ContextDB) = firstindex(db.data.vals)
-
-import Base.length
-length(db::ContextDB) = length(db.data.vals)
+# Error free
+getindex(db::ContextDB, ::Colon, k::String) = [obj[k] for (h, obj) in db.data if haskey(obj, k)]
 
 ## ---------------------------------------------------------------------
 ## CONTEXT HANDLING
@@ -84,7 +81,7 @@ end
 ## DATA HANDLING
 ## ---------------------------------------------------------------------
 
-## ------------------------------------------------------------------
+## ---------------------------------------------------------------------
 # OUTPUT
 # Select an object from a context
 
@@ -100,7 +97,7 @@ getval(db::ContextDB) = getval(db) do
     error("Context not found\n", db.ctx)
 end
 
-## ------------------------------------------------------------------
+## ---------------------------------------------------------------------
 # INPUT
 
 function setval!(db::ContextDB, vals::Vector)
@@ -115,3 +112,18 @@ setval!(db::ContextDB, ctxv::Vector, vals::Vector) = tempcontext(db, ctxv) do
     setval!(db, vals)
 end
 
+## ---------------------------------------------------------------------
+## UTILS
+## ---------------------------------------------------------------------
+
+import Base.isempty
+isempty(db::ContextDB) = isempty(db.data)
+
+import Base.lastindex
+lastindex(db::ContextDB) = lastindex(db.data.vals)
+
+import Base.firstindex
+firstindex(db::ContextDB) = firstindex(db.data.vals)
+
+import Base.length
+length(db::ContextDB) = length(db.data.vals)

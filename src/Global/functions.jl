@@ -43,3 +43,14 @@ getval() = getval(__DB[])
 setval!(vals::Vector) = setval!(__DB[], vals)
 setval!(ctxv::Vector, vals::Vector) = setval!(__DB[], ctxv, vals)
 
+## ---------------------------------------------------------------------
+## QUERY HANDLING
+## ---------------------------------------------------------------------
+
+query(qv::Vector) = query(__DB[], qv)
+query(q, qs...) = query(_datkvec(q, qs...))
+query(f::Function, qv::Vector) = query(f, __DB[], qv)
+query(f::Function, q, qs...) = query(f, __DB[], _datkvec(q, qs...))
+
+queryall(qv::Vector) = queryall(__DB[], qv)
+queryall(q, qs...) = queryall(__DB[], _datkvec(q, qs...))
