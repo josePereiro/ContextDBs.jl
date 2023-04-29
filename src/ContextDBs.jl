@@ -20,23 +20,25 @@ module ContextDBs
     include("Types/2_Entry.jl")
     include("Types/3_Query.jl")
     include("Types/4_ProductQuery.jl")
-    include("Types/5_ContextTree.jl")
     include("Types/6_ContextDB.jl")
 
     #! include Base
     include("Base/context.jl")
-    include("Base/context_tree.jl")
+    include("Base/contextdb.jl")
+    include("Base/entry.jl")
     include("Base/exportall.jl")
     include("Base/kv_interface.jl")
+    include("Base/utils.jl")
 
     #! include Global
+    include("Global/functions.jl")
+    include("Global/globals.jl")
+    include("Global/macros.jl")
 
     @_exportall_words()
 
     function __init__()
-        # __DB[] = ContextDB()
-        # __CTX[] = Context()
+        __DB[] = ContextDB()
     end
-
 
 end

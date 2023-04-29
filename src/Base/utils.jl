@@ -28,6 +28,19 @@ function _issubset_sorted(sub, super)
 end
 
 ## ------------------------------------------------------------------
+function _print_kval(io::IO, vals)
+    for val in vals
+        print(io, _datkey(val), " => ", _datval(val), ", ")
+    end
+end
+
+function _print_ktype(io::IO, vals)
+    for val in vals
+        print(io, _datkey(val), " => ::", typeof(_datval(val)), ", ")
+    end
+end
+
+## ------------------------------------------------------------------
 function _kTDict(kT::DataType, d0::Dict)
     _new = Dict{kT, valtype(d0)}()
     for (k, v) in d0
@@ -37,7 +50,5 @@ function _kTDict(kT::DataType, d0::Dict)
 end
 
 ## ------------------------------------------------------------------
-# @context var
-# @context var1 = val
-# @context key => val
-# @context var1 var2
+# MACRO UTILS
+## ------------------------------------------------------------------

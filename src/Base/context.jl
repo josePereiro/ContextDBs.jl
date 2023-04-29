@@ -42,8 +42,8 @@ function show(io::IO, c::Context)
     print(io, "]")
 end
 
-import Base.length
-length(c::Context) = length(c.vals)
+# import Base.length
+# length(c::Context) = length(c.vals)
 
 import Base.hash
 function hash(c::Context, h::UInt)
@@ -56,42 +56,34 @@ end
 hash(c::Context, i::Int) = hash(c, UInt(i))
 hash(c::Context) = hash(c, 0)
 
-import Base.getindex
-getindex(c::Context, k::String) = getindex(c.vals, k)
+## ------------------------------------------------------------------
+# INPUT
+## ------------------------------------------------------------------
+function _unsafe_set!(c::Context, val) 
+    setindex!(c.vals, _datval(val), _datkey(val))
+    return c
+end
 
-import Base.haskey
-haskey(c::Context, k::String) = haskey(c.vals, k)
+function set!(c::Context, val) 
+    _check_context(val)
+    _unsafe_set!(c, val)
+    return c
+end
 
-import Base.empty!
-empty!(c::Context) = empty!(c.vals)
+## ------------------------------------------------------------------
+import Base.push!
+function _unsafe_push!(c::Context, val)
+    k = _datkey(val)
+    haskey(c, k) && error("Pushing existing key is not allowed, key '$k'. See set!")
+    _unsafe_set!(c, val)
+    return c
+end
 
-# ## ------------------------------------------------------------------
-# # INPUT
-# ## ------------------------------------------------------------------
-# function set!(c::Context, ds...; kwds...) 
-#     for d in ds
-#         _check_context(d)
-#         setindex!(c.vals, _datval(d), _datkey(d))
-#     end
-#     for (k, v) in kwds
-#         _check_context_val(v)
-#         setindex!(c.vals, v, string(k))
-#     end
-#     return c
-# end
-
-# ## ------------------------------------------------------------------
-# import Base.push!
-# function push!(c::Context, ds...; kwds...)
-#     for col in [ds, kwds]
-#         for d in col
-#             k = string(_datkey(d))
-#             haskey(c, k) && error("Pushing existing key is not allowed, key '$k'. See upcontext!")
-#         end
-#     end
-#     set!(c, ds...; kwds...)
-#     return c
-# end
+function push!(c::Context, val)
+    _check_context(val)
+    _unsafe_push!(c, val)
+    return c
+end
 
 # ## ------------------------------------------------------------------
 # import Base.Dict
@@ -106,27 +98,42 @@ empty!(c::Context) = empty!(c.vals)
 # Context(c::Context) = c
 # # Context(q::Query) = Context(q.vals; __checktype = true, __checkunique = false)
 
-# ## ------------------------------------------------------------------
-# # UTILS
-# ## ------------------------------------------------------------------
-# function _hash_vector(c::Context)
-#     vec = [hash(val) for val in c.vals]
-#     sort!(vec)
-#     return vec
-# end
+## ------------------------------------------------------------------
+# UTILS
+## ------------------------------------------------------------------
+function _hash_vector(c::Context)
+    vec = [hash(val) for val in c.vals]
+    sort!(vec)
+    return vec
+end
 
-# function _find_key(c::Context, k0::String)
-#     for (i, k) in enumerate(keys(c.vals))
-#         k == k0 && return i
-#     end
-#     return nothing
-# end
+function _find_key(c::Context, k0::String)
+    for (i, k) in enumerate(keys(c.vals))
+        k == k0 && return i
+    end
+    return nothing
+end
 
-# function _find_key_err(c::Context, k0)
-#     i = _find_key(c, k0)
-#     isnothing(i) && error("Context key not found, key: ", k0)
-#     return i
-# end
+function _find_key_err(c::Context, k0)
+    i = _find_key(c, k0)
+    isnothing(i) && error("Context key not found, key: ", k0)
+    return i
+end
+
+## ---------------------------------------------------------------------
+## CONTEXT HANDLING
+## ---------------------------------------------------------------------
+function delfrom!(ctx::Context, k0)
+    found = false
+    for k in keys(ctx.vals)
+        if found
+            delete!(ctx.vals, k)
+            continue
+        end
+        found = k == k0
+    end
+    return nothing
+end
 
 # ## ------------------------------------------------------------------
 # # CLEAR

@@ -12,6 +12,6 @@ struct Context
         __checkunique && _check_unique_keys(vals) # check
         return new(_datoddict(vals))
     end
-    Context(val, vals...) = Context([val, vals...])
+    Context(ctx::Context) = ctx
     Context() = Context([])
 end

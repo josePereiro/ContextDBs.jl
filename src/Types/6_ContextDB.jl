@@ -1,9 +1,11 @@
 ## ------------------------------------------------------------------
 struct ContextDB
     data::OrderedDict{UInt, Entry}
+    ctx::Context  # current context
     extras::Dict
-    ContextDB(data, extras) = new(data, extras)
-    ContextDB() = new(OrderedDict(), Dict())
+    ContextDB(data, ctx, extras) = new(data, ctx, extras)
+    ContextDB(db::ContextDB, data::OrderedDict) = new(data, db.ctx, db.extras)
+    ContextDB() = new(OrderedDict(), Context(["ROOT"]), Dict())
 end
 
 ## ------------------------------------------------------------------
