@@ -1,9 +1,14 @@
-## ----------------------------------------------------------------------------
-# GLOBAL DB
-## ----------------------------------------------------------------------------
+## ---------------------------------------------------------------------
+## DB HANDLING
+## ---------------------------------------------------------------------
 
 contextdb!(db::ContextDB) = setindex!(__DB, db)
 contextdb() = getindex(__DB)
+function emptycontextdb!() 
+    empty!(__DB[].data)
+    empty!(__DB[].extras)
+    emptycontext!(__DB[])
+end
 
 ## ---------------------------------------------------------------------
 ## CONTEXT HANDLING
@@ -20,7 +25,7 @@ context() = context(__DB[])
 emptycontext!() = emptycontext!(__DB[])
 context!(ctxv::Vector) = context!(__DB[], ctxv)
 savecontext!(k::String) = savecontext!(__DB[], k)
-loadcontext!(k::String) = loadcontext!(__DB[], k)
+loadcontext!(k::String, del::Bool = false) = loadcontext!(__DB[], k, del)
 tempcontext(f::Function, ctxv::Vector) = tempcontext(f, __DB[], ctxv)
 
 ## ---------------------------------------------------------------------

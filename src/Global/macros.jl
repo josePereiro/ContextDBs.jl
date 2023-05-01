@@ -1,11 +1,26 @@
 ## ---------------------------------------------------------------------
+## DB HANDLING
+## ---------------------------------------------------------------------
+
+function __emptycontextdb_expr()
+    return quote
+        ContextDBs.emptycontextdb!()
+    end
+end
+
+macro emptycontextdb!()
+    __emptycontextdb_expr()
+end
+
+
+## ---------------------------------------------------------------------
 ## CONTEXT HANDLING
 ## ---------------------------------------------------------------------
 
 ## ---------------------------------------------------------------------
 function __emptycontext_expr()
     return quote
-        ContextDB.emptycontext!()
+        ContextDBs.emptycontext!()
     end
 end
 
@@ -67,13 +82,14 @@ function __tempcontext_expr(ctx_ex, block_ex)
     # do temp stuff
     _expr = quote
         $(_expr)
+        local _cache_id = string(time())
         try
-            ContextDBs.savecontext!("__WITHCONTEXT_CACHE__")
+            ContextDBs.savecontext!(_cache_id)
             ContextDBs.context!(_kvec)
             # exec block
             $(esc(block_ex))
         finally
-            ContextDBs.loadcontext!("__WITHCONTEXT_CACHE__")
+            ContextDBs.loadcontext!(_cache_id, true)
         end
     end
     return _expr

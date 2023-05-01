@@ -28,11 +28,12 @@ function context!(db::ContextDB, ctxv::Vector)
     isempty(ctxv) && return db.ctx
     foreach(_check_context, ctxv)
 
-    # del from first
-    delfrom!(db.ctx, _datkey(first(ctxv)))
+    # use primer
+    found = _delfrom!(db.ctx, _datkey(first(ctxv)))
     
     # set!
-    for val in ctxv
+    for (i, val) in enumerate(ctxv)
+        found && i == 1 && _datval(val) === :__NOVAL && continue # ignore key only primer
         _unsafe_set!(db.ctx, val)
     end
     
@@ -57,23 +58,25 @@ function savecontext!(db::ContextDB, k::String)
 end
 
 # TODO: Do stash (a dict that store key => contexts)
-function loadcontext!(db::ContextDB, k::String)
+function loadcontext!(db::ContextDB, k::String, del::Bool = false)
     store = get!(db.extras, :CTX_STORE) do 
         Dict{String, Context}()
     end
     emptycontext!(db)
     merge!(db.ctx.vals, store[k].vals)
+    del && delete!(store, k)
     return db.ctx
 end
 
 ## ---------------------------------------------------------------------
 function tempcontext(f::Function, db::ContextDB, ctxv::Vector)
+    _cache_id = string(time())
     try
-        savecontext!(db, "__WITHCONTEXT_CACHE__")
+        savecontext!(db, _cache_id)
         context!(db, ctxv)
         return f()
     finally
-        loadcontext!(db, "__WITHCONTEXT_CACHE__")
+        loadcontext!(db, _cache_id, true)
     end
 end
 

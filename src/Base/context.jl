@@ -123,16 +123,38 @@ end
 ## ---------------------------------------------------------------------
 ## CONTEXT HANDLING
 ## ---------------------------------------------------------------------
-function delfrom!(ctx::Context, k0)
+function _delfrom!(ctx::Context, k0)
     found = false
     for k in keys(ctx.vals)
         if found
             delete!(ctx.vals, k)
-            continue
+        else
+            found = k == k0
         end
-        found = k == k0
     end
-    return nothing
+    return found
+end
+
+function _build_query_kvec(ctx::Context, qv::Vector)
+    
+    kvec = []
+    
+    # Handle primer
+    k0 = first(qv)
+    isa(k0, String) || error("Context primer must be a String, qv: ", qv)
+    i0 = _find_key_err(ctx, k0)
+    for (i, val) in enumerate(ctx.vals)
+        push!(kvec, val)
+        i == i0 && break
+    end
+
+    # Add rest
+    for (i, val) in enumerate(qv)
+        i == 1 && continue
+        push!(kvec, val)
+    end
+    
+    return kvec
 end
 
 # ## ------------------------------------------------------------------

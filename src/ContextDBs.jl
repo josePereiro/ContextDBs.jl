@@ -18,9 +18,8 @@ module ContextDBs
     #! include Types
     include("Types/1_Context.jl")
     include("Types/2_Entry.jl")
-    include("Types/3_Query.jl")
-    include("Types/4_ProductQuery.jl")
-    include("Types/6_ContextDB.jl")
+    include("Types/3_ProductQuery.jl")
+    include("Types/4_ContextDB.jl")
 
     #! include Base
     include("Base/context.jl")
@@ -29,7 +28,6 @@ module ContextDBs
     include("Base/exportall.jl")
     include("Base/kv_interface.jl")
     include("Base/productquery.jl")
-    include("Base/query.jl")
     include("Base/utils.jl")
 
     #! include Global
