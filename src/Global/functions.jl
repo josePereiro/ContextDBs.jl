@@ -10,6 +10,9 @@ function emptycontextdb!()
     emptycontext!(__DB[])
 end
 
+dbcontexts(io::IO) = dbcontexts(io, __DB[])
+dbcontexts() = dbcontexts(stdout)
+
 ## ---------------------------------------------------------------------
 ## CONTEXT HANDLING
 ## ---------------------------------------------------------------------
@@ -18,6 +21,7 @@ end
 # GETTER
 
 context() = context(__DB[])
+context(k::String) = context()[k]
 
 ## ---------------------------------------------------------------------
 # SETTER
@@ -47,6 +51,7 @@ getval() = getval(__DB[])
 
 setval!(vals::Vector) = setval!(__DB[], vals)
 setval!(ctxv::Vector, vals::Vector) = setval!(__DB[], ctxv, vals)
+setval!(ctxv::Vector, q, qs...) = setval!(__DB[], ctxv, _datkvec(q, qs...))
 
 ## ---------------------------------------------------------------------
 ## QUERY HANDLING

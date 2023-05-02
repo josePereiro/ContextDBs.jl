@@ -1,6 +1,6 @@
 ## ------------------------------------------------------------------
 struct ContextDB
-    data::OrderedDict{UInt, Entry}
+    data::OrderedDict{UInt, Context}
     ctx::Context  # current context
     extras::Dict
     ContextDB(data, ctx, extras) = new(data, ctx, extras)

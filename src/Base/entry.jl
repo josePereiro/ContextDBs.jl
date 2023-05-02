@@ -9,7 +9,7 @@ for T in _TAGDB_OBJ_KEY_ALLOWED_TYPES
     @eval _check_tagdb_obj_key(::$T) = nothing
 end
 
-_check_tagdb_obj_key(k) = _check_error("Entry data key", k, _TAGDB_OBJ_KEY_ALLOWED_TYPES)
+_check_tagdb_obj_key(k) = _check_error("Context data key", k, _TAGDB_OBJ_KEY_ALLOWED_TYPES)
 
 ## ------------------------------------------------------------------
 # All allowed
@@ -29,20 +29,20 @@ _check_tagdb_obj(val) = _check_tagdb_obj_key(val)
 ## ------------------------------------------------------------------
 
 import Base.getindex
-function getindex(e::Entry, k::String)
-    haskey(e.ctx, k) && return e.ctx[k]
+function getindex(e::Context, k::String)
+    haskey(e.label, k) && return e.label[k]
     return e.data[k]
 end
 
 ## ------------------------------------------------------------------
 # INPUT
 ## ------------------------------------------------------------------
-function _setindex!(e::Entry, v, k::String)
-    haskey(e.ctx, k) && error("The context keys are reserved. key: $(k)")
+function _setindex!(e::Context, v, k::String)
+    haskey(e.label, k) && error("The context keys are reserved. key: $(k)")
     setindex!(e.data, v, k)
 end
 
-function setval!(e::Entry, vals::Vector)
+function setval!(e::Context, vals::Vector)
     for val in vals
         _check_tagdb_obj(val)
         _setindex!(e, _datval(val), _datkey(val))
@@ -54,14 +54,14 @@ end
 # UTILS
 ## ------------------------------------------------------------------
 import Base.haskey
-haskey(e::Entry, k::String) = haskey(e.ctx, k) || haskey(e.data, k)
+haskey(e::Context, k::String) = haskey(e.label, k) || haskey(e.data, k)
 
 import Base.show
-function show(io::IO, e::Entry)
-    println(io, "Entry")
+function show(io::IO, e::Context)
+    println(io, "Context")
     
-    print(io, " context    ")
-    _print_kval(io, e.ctx)
+    print(io, " label      ")
+    _print_kval(io, e.label)
     println(io)
 
     print(io, " data       ")

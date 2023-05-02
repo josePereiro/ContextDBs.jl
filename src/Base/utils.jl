@@ -7,7 +7,7 @@ _check_error(msg::String, v, allowed::Vector) = error(
 
 ## ------------------------------------------------------------------
 function _check_unique_keys(vals)
-    length(Set(_datkey(val)::String for val in vals)) == length(vals) || error("Context/Query duplicated keys")
+    length(Set(_datkey(val)::String for val in vals)) == length(vals) || error("ContextLabel/Query duplicated keys")
     return nothing
 end
 
@@ -29,15 +29,25 @@ end
 
 ## ------------------------------------------------------------------
 function _print_kval(io::IO, vals)
-    for val in vals
-        print(io, _datkey(val), " => ", _datval(val), ", ")
+    print(io, "[")
+    for p in vals
+        k, val = _datkey(p), _datval(p)
+        if val === :__NOVAL; print(io, repr(k), ", ")
+            else; print(io, repr(k), " => ", repr(val), ", ")
+        end
     end
+    print(io, "]")
 end
 
 function _print_ktype(io::IO, vals)
-    for val in vals
-        print(io, _datkey(val), " => ::", typeof(_datval(val)), ", ")
+    print(io, "[")
+    for p in vals
+        k, val = _datkey(p), _datval(p)
+        if val === :__NOVAL; print(io, repr(k), ", ")
+            else; print(io, repr(k), " => ::", typeof(val), ", ")
+        end
     end
+    print(io, "]")
 end
 
 ## ------------------------------------------------------------------
@@ -49,3 +59,16 @@ function _kTDict(kT::DataType, d0::Dict)
     return _new
 end
 
+## ------------------------------------------------------------------
+function _ktype_vec(vals)
+    ktvec = []
+    for p in vals
+        k, val = _datkey(p), _datval(p)
+        if val === :__NOVAL
+            push!(ktvec, k)
+        else
+            push!(ktvec, k => typeof(val))
+        end
+    end
+    return ktvec
+end

@@ -82,6 +82,7 @@ function __tempcontext_expr(ctx_ex, block_ex)
     # do temp stuff
     _expr = quote
         $(_expr)
+        @show _kvec
         local _cache_id = string(time())
         try
             ContextDBs.savecontext!(_cache_id)
@@ -179,29 +180,35 @@ _unpack_exprs(exs...) = collect(exs)
 
 ## ----------------------------------------------------------------------------
 # From an 'atomic' expression extract the key
-_expr_key(ex::Symbol) = string(ex)
-_expr_key(ex::String) = ex
-_expr_key(ex) = nothing
-function _expr_key(ex::Expr)
+_parse_kv_expr(ex::Symbol) = (string(ex), identity)
+_parse_kv_expr(ex::String) = (ex, (x) -> :__NOVAL)
+_parse_kv_expr(ex) = (nothing, nothing)
+function _parse_kv_expr(ex::Expr)
+    _key = nothing
+    _val_parser = nothing # extract val from the exec value
     if ex.head === :call && ex.args[1] === :(=>)
         # a => expr
-        return string(ex.args[2])
+        _key = string(ex.args[2])
+        _val_parser = last
     elseif ex.head === :(=)
         # a = expr
-        return string(ex.args[1])
+        _key = string(ex.args[1])
+        _val_parser = identity
     elseif ex.head == :global && ex.args[1].head === :(=) 
         # global a = expr
-        return string(ex.args[1].args[1])
+        _key = string(ex.args[1].args[1])
+        _val_parser = identity
     elseif ex.head == :local && ex.args[1].head === :(=) 
         # local a = expr
-        return string(ex.args[1].args[1])
-    else
-        return nothing
+        _key = string(ex.args[1].args[1])
+        _val_parser = identity
     end
+
+    return (_key, _val_parser)
 end
 
-function _expr_key_err(ex)
-    _key = _expr_key(ex)
+function _parse_kv_expr_err(ex)
+    _key = _parse_kv_expr(ex)
     isnothing(_key) && error("The expression is too complex ;(")
     return _key
 end
@@ -216,12 +223,12 @@ function _collect_and_eval_kvec_expr(exv::Vector)
     end
     # fill/exec _kvec
     for ex in exv
-        _key = _expr_key_err(ex)
+        _key, _val_parser = _parse_kv_expr_err(ex)
         _full = quote
             $(_full)
-            local _key = $(_key)
+            local _key = $(_key)#::String
             local _exec = $(esc(ex))
-            local _val = ContextDBs._datval(_exec)
+            local _val = $(_val_parser)(_exec)
             push!(_kvec, _key => _val)
         end
     end

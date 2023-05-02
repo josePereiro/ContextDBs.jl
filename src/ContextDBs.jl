@@ -16,14 +16,14 @@ module ContextDBs
     #! include .
 
     #! include Types
-    include("Types/1_Context.jl")
-    include("Types/2_Entry.jl")
+    include("Types/1_ContextLabel.jl")
+    include("Types/2_Context.jl")
     include("Types/3_ProductQuery.jl")
     include("Types/4_ContextDB.jl")
 
     #! include Base
-    include("Base/context.jl")
     include("Base/contextdb.jl")
+    include("Base/contextlabel.jl")
     include("Base/entry.jl")
     include("Base/exportall.jl")
     include("Base/kv_interface.jl")

@@ -73,7 +73,7 @@ _tags_product(tags::Vector) = _tags_product(tags...)
 function query(f::Function, db::ContextDB, qv::Vector)
     # integrate context
     found = nothing
-    qv = _build_query_kvec(db.ctx, qv)
+    qv = _build_query_kvec(db.ctx.label, qv)
     pq = ProductQuery(qv)
     for q in pq.qs # for each query
         for (h, obj) in db.data # for each obj
@@ -95,8 +95,8 @@ query(db::ContextDB, q, qs...) = query(db, _datkvec(q, qs...))
 # ------------------------------------------------------------------
 function queryall(db::ContextDB, qv::Vector)
     isempty(db.data) && return db
-    found = OrderedDict{UInt, Entry}()
-    qv = _build_query_kvec(db.ctx, qv)
+    found = OrderedDict{UInt, Context}()
+    qv = _build_query_kvec(db.ctx.label, qv)
     pq = ProductQuery(qv)
     # TODO: make more efficient
     for q in pq.qs # for each query
@@ -147,28 +147,19 @@ function _obj_match(vals::AbstractDict, q)
     return false
 end
 
-function _obj_match(obj::Entry, qi)
-    _obj_match(obj.ctx, qi) && return true
-    _obj_match(obj.data, qi) && return true
+function _obj_match(c::Context, qi)
+    _obj_match(c.label, qi) && return true
+    _obj_match(c.data, qi) && return true
     return false
 end
 
 # A tuple must match all elms
-function _obj_match(obj::Entry, qs::Tuple)
+function _obj_match(c::Context, qs::Tuple)
     for qi in qs
-        _obj_match(obj, qi) || return false
+        _obj_match(c, qi) || return false
     end
     return true
 end
-
-# function _obj_match(obj::Entry, q::Query)
-#     for qi in q.vals
-#         _obj_match(obj, qi) || return false
-#     end
-#     return true
-# end
-
-# _obj_match(obj::Entry, c::Context) = _obj_match(obj, Query(c))
 
 ## ------------------------------------------------------------------
 # UTILS
