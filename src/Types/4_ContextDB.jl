@@ -11,8 +11,4 @@ struct ContextDB
     ContextDB() = new(OrderedDict(), ContextLabel(["ROOT"]), OrderedDict(), Dict())
 end
 
-## ------------------------------------------------------------------
-import Base.show
-function show(io::IO, db::ContextDB)
-    println(io, "ContextDB with ", length(db.data), " contexts")
-end
+
