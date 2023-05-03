@@ -73,7 +73,7 @@ _tags_product(tags::Vector) = _tags_product(tags...)
 function query(f::Function, db::ContextDB, qv::Vector)
     # integrate context
     found = nothing
-    qv = _build_query_kvec(db.ctx.label, qv)
+    qv = _build_query_kvec(db.label, qv)
     pq = ProductQuery(qv)
     for q in pq.qs # for each query
         for (h, obj) in db.data # for each obj
@@ -96,7 +96,7 @@ query(db::ContextDB, q, qs...) = query(db, _datkvec(q, qs...))
 function queryall(db::ContextDB, qv::Vector)
     isempty(db.data) && return db
     found = OrderedDict{UInt, ContextObj}()
-    qv = _build_query_kvec(db.ctx.label, qv)
+    qv = _build_query_kvec(db.label, qv)
     pq = ProductQuery(qv)
     # TODO: make more efficient
     for q in pq.qs # for each query

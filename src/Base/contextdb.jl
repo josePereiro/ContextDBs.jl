@@ -163,6 +163,8 @@ tempcontextlabel(f::Function, db::ContextDB) = tempcontextlabel(f, db, [])
 function stage!(db::ContextDB, valv::Vector)
     for p in valv
         _check_tagdb_obj(p)
+        # TODO: Think about allowing overwriting or not
+        # It might be usefull for preventing missing commit cmds
         db.stage[_datkey(p)] = _datval(p)
     end
     return nothing
@@ -205,9 +207,9 @@ function commit!(db::ContextDB, vals::Vector)
     en = contextobj(db) do 
         db.data[hash(db.label)] = ContextObj(db.label)
     end
+    stage!(db, vals)
     commit!(en, db.stage)
     empty!(db.stage)
-    commit!(en, vals)
     return en
 end
 
@@ -303,3 +305,10 @@ function typedcontexts(io::IO, db::ContextDB)
 end
 
 typedcontexts(db::ContextDB) = typedcontexts(stdout, db)
+
+## ------------------------------------------------------------------
+import Base.show
+function show(io::IO, db::ContextDB)
+    println(io, "ContextDB with ", length(db.data), " contexts")
+    typedcontexts(io, db)
+end
