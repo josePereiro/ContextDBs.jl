@@ -95,7 +95,7 @@ query(db::ContextDB, q, qs...) = query(db, _datkvec(q, qs...))
 # ------------------------------------------------------------------
 function queryall(db::ContextDB, qv::Vector)
     isempty(db.data) && return db
-    found = OrderedDict{UInt, Context}()
+    found = OrderedDict{UInt, ContextObj}()
     qv = _build_query_kvec(db.ctx.label, qv)
     pq = ProductQuery(qv)
     # TODO: make more efficient
@@ -147,14 +147,14 @@ function _obj_match(vals::AbstractDict, q)
     return false
 end
 
-function _obj_match(c::Context, qi)
+function _obj_match(c::ContextObj, qi)
     _obj_match(c.label, qi) && return true
     _obj_match(c.data, qi) && return true
     return false
 end
 
 # A tuple must match all elms
-function _obj_match(c::Context, qs::Tuple)
+function _obj_match(c::ContextObj, qs::Tuple)
     for qi in qs
         _obj_match(c, qi) || return false
     end

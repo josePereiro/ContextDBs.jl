@@ -40,7 +40,7 @@ function show(io::IO, l::ContextLabel)
 end
 
 import Base.hash
-# The order of the context values should not matter
+# The order of the context labels should not matter hash(["BLA", "BLO" => 1]) == hash(["BLO" => 1, "BLA"])
 function hash(l::ContextLabel, h::UInt)
     h = hash(:ContextLabel, h)
     for v in l.vals
@@ -62,26 +62,26 @@ function _unsafe_setlabel!(l::ContextLabel, val)
     return l
 end
 
-function set!(l::ContextLabel, val) 
-    _check_contextlabel(val)
-    _unsafe_setlabel!(l, val)
-    return l
-end
+# function set!(l::ContextLabel, val) 
+#     _check_contextlabel(val)
+#     _unsafe_setlabel!(l, val)
+#     return l
+# end
 
 ## ------------------------------------------------------------------
 import Base.push!
 function _unsafe_push!(l::ContextLabel, val)
     k = _datkey(val)
-    haskey(l, k) && error("Pushing existing key is not allowed, key '$k'. See set!")
+    haskey(l, k) && error("Pushing existing key is not allowed, key: ", k)
     _unsafe_setlabel!(l, val)
     return l
 end
 
-function push!(l::ContextLabel, val)
-    _check_contextlabel(val)
-    _unsafe_push!(l, val)
-    return l
-end
+# function push!(l::ContextLabel, val)
+#     _check_contextlabel(val)
+#     _unsafe_push!(l, val)
+#     return l
+# end
 
 ## ------------------------------------------------------------------
 # UTILS

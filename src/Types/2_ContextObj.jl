@@ -1,9 +1,10 @@
 ## ------------------------------------------------------------------
 # An storage optimized for Querying
-struct Context
+# TODO: Rename to ContextObj
+struct ContextObj
     label::OrderedDict{String, Any}
     data::OrderedDict{String, Any}
-    Context(l::ContextLabel) = new(OrderedDict(l.vals), OrderedDict())
-    Context(lv::Vector) = Context(ContextLabel(lv))
+    ContextObj(l::ContextLabel) = new(OrderedDict(l.vals), OrderedDict())
+    ContextObj(lv::Vector) = ContextObj(ContextLabel(lv))
 end
 

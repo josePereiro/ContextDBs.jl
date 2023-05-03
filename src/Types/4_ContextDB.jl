@@ -1,11 +1,14 @@
 ## ------------------------------------------------------------------
 struct ContextDB
-    data::OrderedDict{UInt, Context}
-    ctx::Context  # current context
-    extras::Dict
-    ContextDB(data, ctx, extras) = new(data, ctx, extras)
-    ContextDB(db::ContextDB, data::OrderedDict) = new(data, db.ctx, db.extras)
-    ContextDB() = new(OrderedDict(), Context(["ROOT"]), Dict())
+    
+    data::OrderedDict{UInt, ContextObj}     # commited data
+    label::ContextLabel                  # current context label
+    stage::OrderedDict{String, Any}      # current uncommited data
+    extras::Dict                         # utils
+
+    ContextDB(data, label, stage, extras) = new(data, label, stage, extras)
+    ContextDB(db::ContextDB, data::OrderedDict) = new(data, db.label, db.stage, db.extras)
+    ContextDB() = new(OrderedDict(), ContextLabel(["ROOT"]), OrderedDict(), Dict())
 end
 
 ## ------------------------------------------------------------------

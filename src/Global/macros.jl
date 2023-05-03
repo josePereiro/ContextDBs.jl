@@ -17,15 +17,66 @@ end
 ## CONTEXT HANDLING
 ## ---------------------------------------------------------------------
 
-## ---------------------------------------------------------------------
+function __contextlabel_expr()
+    return quote
+        ContextDBs.contextlabel()
+    end
+end
+
+macro contextlabel()
+    __contextlabel_expr()
+end
+
+function __emptycontextlabel_expr()
+    return quote
+        ContextDBs.emptycontextlabel!()
+    end
+end
+
+macro emptycontextlabel!()
+    __emptycontextlabel_expr()
+end
+
+function __emptycontextstage_expr()
+    return quote
+        ContextDBs.emptycontextstage!()
+    end
+end
+
+macro emptycontextstage!()
+    __emptycontextstage_expr()
+end
+
 function __emptycontext_expr()
     return quote
         ContextDBs.emptycontext!()
     end
 end
 
-macro emptycontext!() 
+macro emptycontext!()
     __emptycontext_expr()
+end
+
+## ---------------------------------------------------------------------
+
+function __showcontext_expr()
+    return quote
+        ContextDBs.showcontext()
+    end
+end
+
+macro showcontext()
+    __showcontext_expr()
+end
+
+function __typedcontexts_expr()
+    return quote
+        ContextDBs.typedcontexts()
+    end
+end
+
+macro typedcontexts()
+    __typedcontexts_expr()
 end
 
 ## ---------------------------------------------------------------------
@@ -46,30 +97,85 @@ macro context!(exs...)
     __context_expr(exs...)
 end
 
+## ---------------------------------------------------------------------
+# STASH
+## ---------------------------------------------------------------------
 
 ## ---------------------------------------------------------------------
-function __savecontext_expr(ex)
+# CONTEXT LABEL
+
+function __stashlabel_expr(ex)
     return quote
-        ContextDBs.savecontext!($(esc(ex)))
+        ContextDBs.stashlabel!($(esc(ex)))
     end
 end
 
-macro savecontext!(ex)
-    __savecontext_expr(ex)
+macro stashlabel!(ex::String)
+    __stashlabel_expr(ex)
 end
 
-## ---------------------------------------------------------------------
-function __loadcontext_expr(ex)
+function __unstashlabel_expr(ex)
     return quote
-        ContextDBs.loadcontext!($(esc(ex)))
+        ContextDBs.unstashlabel!($(esc(ex)))
     end
 end
 
-macro loadcontext!(ex)
-    __loadcontext_expr(ex)
+macro unstashlabel!(ex::String)
+    __unstashlabel_expr(ex)
 end
 
 ## ---------------------------------------------------------------------
+# CONTEXT STAGE
+
+function __stashstage_expr(ex)
+    return quote
+        ContextDBs.stashstage!($(esc(ex)))
+    end
+end
+
+macro stashstage!(ex::String)
+    __stashstage_expr(ex)
+end
+
+function __unstashstage_expr(ex)
+    return quote
+        ContextDBs.unstashstage!($(esc(ex)))
+    end
+end
+
+macro unstashstage!(ex::String)
+    __unstashstage_expr(ex)
+end
+
+## ---------------------------------------------------------------------
+# FULL CONTEXT
+
+function __stashcontext_expr(ex)
+    return quote
+        ContextDBs.stashcontext!($(esc(ex)))
+    end
+end
+
+macro stashcontext!(ex::String)
+    __stashcontext_expr(ex)
+end
+
+function __unstashcontext_expr(ex)
+    return quote
+        ContextDBs.unstashcontext!($(esc(ex)))
+    end
+end
+
+macro unstashcontext!(ex::String)
+    __unstashcontext_expr(ex)
+end
+
+## ---------------------------------------------------------------------
+## TEMP INTERFACE
+## ---------------------------------------------------------------------
+
+## ---------------------------------------------------------------------
+# stash -> f -> commit -> unstash
 function __tempcontext_expr(ctx_ex, block_ex)
     
     # check/unpack input
@@ -82,15 +188,15 @@ function __tempcontext_expr(ctx_ex, block_ex)
     # do temp stuff
     _expr = quote
         $(_expr)
-        @show _kvec
         local _cache_id = string(time())
         try
-            ContextDBs.savecontext!(_cache_id)
+            ContextDBs.stashcontext!(_cache_id)
             ContextDBs.context!(_kvec)
             # exec block
             $(esc(block_ex))
         finally
-            ContextDBs.loadcontext!(_cache_id, true)
+            ContextDBs.commit!()
+            ContextDBs.unstashcontext!(_cache_id, true)
         end
     end
     return _expr
@@ -101,13 +207,47 @@ macro tempcontext(ctx_ex, block_ex)
 end
 
 ## ---------------------------------------------------------------------
+# stash -> f -> unstash
+function __tempcontextlabel_expr(ctx_ex, block_ex)
+    
+    # check/unpack input
+    ctx_exv = _unpack_vec_expr_err(ctx_ex)
+    block_ex = _block_expr_err(block_ex)
+
+    # resolve ctx kvec
+    _expr = _collect_and_eval_kvec_expr(ctx_exv)
+
+    # do temp stuff
+    _expr = quote
+        $(_expr)
+        local _cache_id = string(time())
+        try
+            ContextDBs.stashlabel!(_cache_id)
+            ContextDBs.context!(_kvec)
+            # exec block
+            $(esc(block_ex))
+        finally
+            ContextDBs.unstashlabel!(_cache_id, true)
+        end
+    end
+    return _expr
+end
+
+macro tempcontextlabel(ctx_ex, block_ex)
+    __tempcontextlabel_expr(ctx_ex, block_ex)
+end
+
+## ---------------------------------------------------------------------
 ## DATA HANDLING
 ## ---------------------------------------------------------------------
 
-## ------------------------------------------------------------------
+## ---------------------------------------------------------------------
 # INPUT
 
-function __setval_expr(val_exs...)
+## ---------------------------------------------------------------------
+# STAGE
+
+function __stage_expr(val_exs...)
     
     ctx_exv, val_exv = _unpack_first_vec_expr(val_exs...)
 
@@ -121,23 +261,45 @@ function __setval_expr(val_exs...)
         local _ctxv = _kvec
         $(_valv_expr)
         local _valv = _kvec
-        ContextDBs.setval!(_ctxv, _valv)
+        ContextDBs.stage!(_ctxv, _valv)
     end
 end
 
-macro setval!(val_exs...)
-    __setval_expr(val_exs...)
+macro stage!(val_exs...)
+    __stage_expr(val_exs...)
 end
 
-# setval!(vals::Vector) = setval!(__DB[], vals)
-# setval!(ctxv::Vector, vals::Vector) = setval!(__DB[], ctxv, vals)
+## ---------------------------------------------------------------------
+# COMMIT
+
+function __commit_expr(val_exs...)
+    
+    ctx_exv, val_exv = _unpack_first_vec_expr(val_exs...)
+
+    # resolve ctx kvec
+    _ctxv_expr = _collect_and_eval_kvec_expr(ctx_exv)
+    _valv_expr = _collect_and_eval_kvec_expr(val_exv)
+
+    # setval
+    return quote
+        $(_ctxv_expr)
+        local _ctxv = _kvec
+        $(_valv_expr)
+        local _valv = _kvec
+        ContextDBs.commit!(_ctxv, _valv)
+    end
+end
+
+macro commit!(val_exs...)
+    __commit_expr(val_exs...)
+end
 
 
-## ----------------------------------------------------------------------------
+## ---------------------------------------------------------------------
 ## MACROS UTILS
-## ----------------------------------------------------------------------------
+## ---------------------------------------------------------------------
 
-## ----------------------------------------------------------------------------
+## ---------------------------------------------------------------------
 # return the expr if it is a block
 function _block_expr(ex::Expr)
     ex.head == :block && return ex
@@ -152,7 +314,7 @@ function _block_expr_err(ex)
     return ex
 end
 
-## ----------------------------------------------------------------------------
+## ---------------------------------------------------------------------
 # uncat :([a b]) into a vector of Exprs [:a, :b]
 function _unpack_vec_expr(ex::Expr)
     ex.head == :vect && return ex.args
@@ -170,7 +332,7 @@ function _unpack_vec_expr_err(exs...)
     return exs
 end
 
-## ----------------------------------------------------------------------------
+## ---------------------------------------------------------------------
 # general unpacking, return a vector of exprs
 function _unpack_exprs(ex)
     exs = _unpack_vec_expr(ex)
@@ -178,7 +340,7 @@ function _unpack_exprs(ex)
 end
 _unpack_exprs(exs...) = collect(exs)
 
-## ----------------------------------------------------------------------------
+## ---------------------------------------------------------------------
 # From an 'atomic' expression extract the key
 _parse_kv_expr(ex::Symbol) = (string(ex), identity)
 _parse_kv_expr(ex::String) = (ex, (x) -> :__NOVAL)
