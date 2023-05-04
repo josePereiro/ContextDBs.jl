@@ -66,52 +66,6 @@ end
 _tags_product(tags::Vector) = _tags_product(tags...)
 
 ## ------------------------------------------------------------------
-## QUERYING
-## ------------------------------------------------------------------
-
-# ------------------------------------------------------------------
-function query(f::Function, db::ContextDB, qv::Vector)
-    # integrate context
-    found = nothing
-    qv = _build_query_kvec(db.label, qv)
-    pq = ProductQuery(qv)
-    for q in pq.qs # for each query
-        for (h, obj) in db.data # for each obj
-            if _obj_match(obj, q) 
-                isnothing(found) || error("The query do not solve an unique entry. See 'queryall'")
-                found = obj
-            end
-        end
-    end
-    return isnothing(found) ? f() : found
-end
-query(f::Function, db::ContextDB, q, qs...) = query(f, db, _datkvec(q, qs...))
-
-query(db::ContextDB, qv::Vector) = query(db, qv) do 
-    error("The query do not solve any entry")
-end
-query(db::ContextDB, q, qs...) = query(db, _datkvec(q, qs...))
-
-# ------------------------------------------------------------------
-function queryall(db::ContextDB, qv::Vector)
-    isempty(db.data) && return db
-    found = OrderedDict{UInt, ContextObj}()
-    qv = _build_query_kvec(db.label, qv)
-    pq = ProductQuery(qv)
-    # TODO: make more efficient
-    for q in pq.qs # for each query
-        for (h, obj) in db.data # for each obj
-            if _obj_match(obj, q)
-                setindex!(found, obj, h)
-            end
-        end
-    end
-    isempty(found) && error("The query/context do not match any entry.")
-    return ContextDB(db, found)
-end
-queryall(db::ContextDB, q, qs...) = queryall(db, _datkvec(q, qs...))
-
-## ------------------------------------------------------------------
 ## MATCHING
 ## ------------------------------------------------------------------
 

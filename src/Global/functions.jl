@@ -11,6 +11,8 @@ function emptycontextdb!()
     return nothing
 end
 
+emptycontextobj!() = emptycontextobj!(__DB[])
+
 ## ---------------------------------------------------------------------
 ## CONTEXT LABEL HANDLING
 ## ---------------------------------------------------------------------
@@ -19,7 +21,8 @@ contextlabel() = contextlabel(__DB[])
 emptycontextlabel!() = emptycontextlabel!(__DB[])
 emptycontextstage!() = emptycontextstage!(__DB[])
 emptycontext!() = emptycontext!(__DB[])
-context!(labv::Vector) = context!(__DB[], labv)
+context!(labkv::Vector) = context!(__DB[], labkv)
+typedcontexts() = typedcontexts(__DB[])
 
 ## ---------------------------------------------------------------------
 # STASH
@@ -48,13 +51,13 @@ unstashcontext!(k::String, del::Bool = false) = unstashcontext!(__DB[], k, del)
 ## ---------------------------------------------------------------------
 
 # stash -> f -> commit -> unstash
-tempcontext(f::Function, labv::Vector) = tempcontext(f, __DB[], labv)
+tempcontext(f::Function, labkv::Vector) = tempcontext(f, __DB[], labkv)
 tempcontext(f::Function) = tempcontext(f, __DB[], [])
 
 
 ## ---------------------------------------------------------------------
 # stash -> f -> unstash
-tempcontextlabel(f::Function, labv::Vector) = tempcontextlabel(f, __DB[], labv)
+tempcontextlabel(f::Function, labkv::Vector) = tempcontextlabel(f, __DB[], labkv)
 tempcontextlabel(f::Function) = tempcontextlabel(f, __DB[], [])
 
 
@@ -65,31 +68,35 @@ tempcontextlabel(f::Function) = tempcontextlabel(f, __DB[], [])
 ## ---------------------------------------------------------------------
 # STAGE
 stage!(valv::Vector) = stage!(__DB[], valv)
-stage!(labv::Vector, valv::Vector) = stage!(__DB[], labv, valv)
+isemptystage() = isemptystage(__DB[])
 
 ## ---------------------------------------------------------------------
 # OUTPUT
 # Select an object from a context
 
 contextobj(f::Function) = contextobj(f, __DB[])
-contextobj(f::Function, labv::Vector) = contextobj(f, __DB[], labv) 
-contextobj(labv::Vector) = contextobj(__DB[], labv)
+contextobj(f::Function, labkv::Vector) = contextobj(f, __DB[], labkv) 
+contextobj(labkv::Vector) = contextobj(__DB[], labkv)
 contextobj() = contextobj(__DB[])
 
 
 ## ---------------------------------------------------------------------
 hasobj() = hasobj(__DB[])
-hasobj(labv::Vector) = hasobj(__DB[], labv)
+hasobj(labkv::Vector) = hasobj(__DB[], labkv)
 
 ## ---------------------------------------------------------------------
 # INPUT
 
 # commit stage data and additional vals
 # It will empty! the stage
-commit!(labv::Vector, vals::Vector) = commit!(__DB[], labv, vals)
+commitcontext!(labkv::Vector) = commitcontext!(__DB[], labkv)
+commitcontext!(q, qs...) = commitcontext!(__DB[], _datkvec(q, qs...))
+commitcontext!() = commitcontext!(__DB[])
+
+commit!(labkv::Vector, vals::Vector) = commit!(__DB[], labkv, vals)
 commit!(vals::Vector) = commit!(__DB[], vals)
 commit!(ctxv::Vector, q, qs...) = commit!(__DB[], ctxv, _datkvec(q, qs...))
-commit!() = commit!(__DB[])
+
 
 ## ---------------------------------------------------------------------
 ## FULL CONTEXT HANDLING
@@ -97,14 +104,17 @@ commit!() = commit!(__DB[])
 
 ## ---------------------------------------------------------------------
 context(k::String) = context(__DB[], k)
-context(labv::Vector, k::String) = context(__DB[], labv, k)
+context(labkv::Vector, k::String) = context(__DB[], labkv, k)
 
 ## ---------------------------------------------------------------------
 showcontext(io::IO) = showcontext(io, __DB[])
 showcontext() = showcontext(__DB[])
 
-typedcontexts(io::IO) = typedcontexts(io, __DB[])
-typedcontexts() = typedcontexts(__DB[])
+showtypedcontexts(io::IO) = showtypedcontexts(io, __DB[])
+showtypedcontexts() = showtypedcontexts(__DB[])
+
+showbookmarks(io::IO) = showbookmarks(io, __DB[])
+showbookmarks() = showbookmarks(stdout, __DB[])
 
 ## ---------------------------------------------------------------------
 ## QUERY HANDLING

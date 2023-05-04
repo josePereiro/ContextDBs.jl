@@ -120,13 +120,13 @@ function _delfrom!(l::ContextLabel, k0)
     return found
 end
 
-function _build_query_kvec(l::ContextLabel, qv::Vector)
+function _build_qkvec(l::ContextLabel, qkvec::Vector)
     
     kvec = []
     
     # Handle primer
-    k0 = first(qv)
-    isa(k0, String) || error("ContextLabel primer must be a String, qv: ", qv)
+    k0 = first(qkvec)
+    isa(k0, String) || error("ContextLabel primer must be a String, kvec: ", qkvec)
     i0 = _find_key_err(l, k0)
     for (i, val) in enumerate(l.vals)
         push!(kvec, val)
@@ -134,7 +134,7 @@ function _build_query_kvec(l::ContextLabel, qv::Vector)
     end
 
     # Add rest
-    for (i, val) in enumerate(qv)
+    for (i, val) in enumerate(qkvec)
         i == 1 && continue
         push!(kvec, val)
     end

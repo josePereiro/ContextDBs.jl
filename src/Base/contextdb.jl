@@ -10,6 +10,10 @@ getindex(db::ContextDB, ::typeof(!), k::String) = [obj[k] for (h, obj) in db.dat
 
 # Error free
 getindex(db::ContextDB, ::Colon, k::String) = [obj[k] for (h, obj) in db.data if haskey(obj, k)]
+getindex(db::ContextDB, i, k::String) = getindex(db, :, k)[i]
+
+# extract commands
+getindex(db::ContextDB, f::Function, k::String) = f(getindex(db, :, k))
 
 ## ---------------------------------------------------------------------
 ## CONTEXT LABEL HANDLING
@@ -19,6 +23,28 @@ contextlabel(db::ContextDB) = db.label
 
 ## ---------------------------------------------------------------------
 # SETTER
+
+# function context!(db::ContextDB, lkvec::Vector)
+    
+#     # some checks
+#     isempty(lkvec) && return nothing
+    
+#     # resolve primer
+#     primer, lkvec = _resolve_primer(db, lkvec)
+    
+#     # check contextlabel
+#     foreach(_check_contextlabel, lkvec)
+#     @show lkvec
+#     _check_unique_keys(lkvec)
+    
+#     # set!
+#     empty!(db.label.vals)
+#     for kv in lkvec
+#         _unsafe_setlabel!(db.label, kv)
+#     end
+    
+#     return nothing
+# end
 
 function context!(db::ContextDB, labv::Vector)
     
@@ -56,6 +82,50 @@ function emptycontext!(db::ContextDB)
     return nothing
 end
 
+function emptycontextobj!(db::ContextDB)
+    obj = contextobj(db) do 
+        nothing    
+    end
+    isnothing(obj) && return nothing
+    
+    delete!(db.data, labelhash(obj))
+
+    return nothing
+end
+
+## ---------------------------------------------------------------------
+# CHECKPOINTS
+## ---------------------------------------------------------------------
+function bookmark!(db::ContextDB, k::Symbol)
+    store = get!(db.extras, :CTX_LABEL_CHECKPOINT) do 
+        Dict{Symbol, ContextLabel}()
+    end
+    store[k] = deepcopy(db.label)  # deepcopy
+    return nothing
+end
+
+function bookmark(db::ContextDB, k::Symbol)
+    store = get!(db.extras, :CTX_LABEL_CHECKPOINT) do 
+        Dict{Symbol, ContextLabel}()
+    end
+    return get(store, k) do
+        error("Bookmark missing, key ", k)
+    end
+end
+
+function showbookmarks(io::IO, db::ContextDB)
+    store = get!(db.extras, :CTX_LABEL_CHECKPOINT) do 
+        Dict{String, ContextLabel}()
+    end
+
+    println(io, " Bookmarks: ")
+    for (k, label) in store
+        # println(io, k, " => ", _print_kval(io, label.vals))
+        println(io, repr(k), " => ", repr(label))
+    end
+end
+showbookmarks(db::ContextDB) = showbookmarks(stdout, db)
+
 ## ---------------------------------------------------------------------
 # STASH
 ## ---------------------------------------------------------------------
@@ -64,7 +134,7 @@ end
 # CONTEXT LABEL
 
 function stashlabel!(db::ContextDB, k::String)
-    store = get!(db.extras, :CTX_LABEL_STORE) do 
+    store = get!(db.extras, :CTX_LABEL_STASH) do 
         Dict{String, ContextLabel}()
     end
     store[k] = deepcopy(db.label)  # deepcopy
@@ -72,11 +142,12 @@ function stashlabel!(db::ContextDB, k::String)
 end
 
 function unstashlabel!(db::ContextDB, k::String, del::Bool = false)
-    
-    store = get!(db.extras, :CTX_LABEL_STORE) do 
+    store = get!(db.extras, :CTX_LABEL_STASH) do 
         Dict{String, ContextLabel}()
     end
-    _label = store[k]
+    _label = get(store, k) do
+        error("Stash missing, key ", k)
+    end
     empty!(db.label.vals)
     merge!(db.label.vals, _label.vals)
     del && delete!(store, k)
@@ -87,7 +158,7 @@ end
 # CONTEXT STAGE
 
 function stashstage!(db::ContextDB, k::String)
-    store = get!(db.extras, :CTX_STAGE_STORE) do 
+    store = get!(db.extras, :CTX_STAGE_STASH) do 
         Dict{String, OrderedDict{String, Any}}()
     end
     store[k] = OrderedDict(db.stage)  # shadowcopy
@@ -95,7 +166,7 @@ function stashstage!(db::ContextDB, k::String)
 end
 
 function unstashstage!(db::ContextDB, k::String, del::Bool = false)
-    store = get!(db.extras, :CTX_STAGE_STORE) do 
+    store = get!(db.extras, :CTX_STAGE_STASH) do 
         Dict{String, OrderedDict{String, Any}}()
     end
     _stage = store[k]
@@ -126,14 +197,14 @@ end
 
 ## ---------------------------------------------------------------------
 # stash -> f -> commit -> unstash
-function tempcontext(f::Function, db::ContextDB, labv::Vector)
+function tempcontext(f::Function, db::ContextDB, labkv::Vector)
     _cache_id = string(time())
     try
         stashcontext!(db, _cache_id)
-        context!(db, labv)
+        context!(db, labkv)
         return f()
     finally
-        commit!(db)
+        isempty(db.stage) || commitcontext!(db)
         unstashcontext!(db, _cache_id, true)
     end
 end
@@ -142,11 +213,11 @@ tempcontext(f::Function, db::ContextDB) = tempcontext(f, db, [])
 
 ## ---------------------------------------------------------------------
 # stash -> f -> unstash
-function tempcontextlabel(f::Function, db::ContextDB, labv::Vector)
+function tempcontextlabel(f::Function, db::ContextDB, labkv::Vector)
     _cache_id = string(time())
     try
         stashlabel!(db, _cache_id)
-        context!(db, labv)
+        context!(db, labkv)
         return f()
     finally
         unstashlabel!(db, _cache_id, true)
@@ -170,22 +241,18 @@ function stage!(db::ContextDB, valv::Vector)
     return nothing
 end
 
-stage!(db::ContextDB, labv::Vector, valv::Vector) = tempcontextlabel(db, labv) do
-    stage!(db, valv)
-end
-
 ## ---------------------------------------------------------------------
 # OUTPUT
 
 ## ---------------------------------------------------------------------
 # Select an object from a context
 
-contextobj(f::Function, db::ContextDB) = get(f, db.data, hash(db.label))
-contextobj(f::Function, db::ContextDB, labv::Vector) = tempcontextlabel(db, labv) do 
+contextobj(f::Function, db::ContextDB) = get(f, db.data, labelhash(db))
+contextobj(f::Function, db::ContextDB, labkv::Vector) = tempcontextlabel(db, labkv) do 
     return contextobj(f, db)
 end
 
-contextobj(db::ContextDB, labv::Vector) = contextobj(db, labv) do
+contextobj(db::ContextDB, labkv::Vector) = contextobj(db, labkv) do
     error("ContextLabel not found\n", db.label)
 end
 contextobj(db::ContextDB) = contextobj(db) do
@@ -193,8 +260,8 @@ contextobj(db::ContextDB) = contextobj(db) do
 end
 
 ## ---------------------------------------------------------------------
-hasobj(db::ContextDB) = haskey(db.data, hash(db.label))
-hasobj(db::ContextDB, labv::Vector) = tempcontextlabel(db, labv) do 
+hasobj(db::ContextDB) = haskey(db.data, labelhash(db))
+hasobj(db::ContextDB, labkv::Vector) = tempcontextlabel(db, labkv) do 
     return hasobj(db)
 end
 
@@ -203,23 +270,29 @@ end
 
 # commit stage data and additional vals
 # It will empty! the stage
-function commit!(db::ContextDB, vals::Vector)
+
+function commitcontext!(db::ContextDB)
+    isemptystage(db) && error("Nothing to commit!")
     en = contextobj(db) do 
-        db.data[hash(db.label)] = ContextObj(db.label)
+        db.data[labelhash(db)] = ContextObj(db.label)
     end
-    stage!(db, vals)
     commit!(en, db.stage)
     empty!(db.stage)
     return en
 end
 
-commit!(db::ContextDB) = commit!(db, [])
-
-commit!(db::ContextDB, labv::Vector, vals::Vector) = tempcontextlabel(db, labv) do
-    commit!(db, vals)
+commitcontext!(db::ContextDB, labkv::Vector) = tempcontextlabel(db, labkv) do
+    commitcontext!(db)
 end
 
-# for commit not current context use `commit!(db, labv, [])`
+function commit!(db::ContextDB, vals::Vector)
+    stage!(db, vals)
+    commitcontext!(db)
+end
+
+commit!(db::ContextDB, labkv::Vector, vals::Vector) = tempcontextlabel(db, labkv) do
+    commit!(db, vals)
+end
 
 ## ---------------------------------------------------------------------
 ## FULL CONTEXT HANDLING
@@ -237,13 +310,13 @@ function context(db::ContextDB, k::String)
     end
 end
 
-context(db::ContextDB, labv::Vector, k::String) = tempcontextlabel(db, labv) do
+context(db::ContextDB, labkv::Vector, k::String) = tempcontextlabel(db, labkv) do
     context(db, k)
 end
 
 ## ---------------------------------------------------------------------
 function showcontext(io::IO, db::ContextDB)
-    println(io, "Context")
+    println(io, "Current Context:")
     
     print(io, " label      ")
     _print_kval(io, db.label.vals)
@@ -270,12 +343,112 @@ end
 
 showcontext(db::ContextDB) = showcontext(stdout, db)
 
+## ------------------------------------------------------------------
+## QUERYING
+## ------------------------------------------------------------------
+
+# ------------------------------------------------------------------
+function query(f::Function, db::ContextDB, qkvec::Vector)
+    # integrate context
+    found = nothing
+    
+    qkvec = _build_qkvec(db.label, qkvec)
+    # primer, qkvec = _resolve_primer(db, qkvec)
+    # isnothing(primer) && error("You must set a primer. qkvec ", qkvec)
+    pq = ProductQuery(qkvec)
+    for q in pq.qs # for each query
+        for (h, obj) in db.data # for each obj
+            if _obj_match(obj, q) 
+                isnothing(found) || error("The query do not solve an unique entry. See 'queryall'")
+                found = obj
+            end
+        end
+    end
+    return isnothing(found) ? f() : found
+end
+query(f::Function, db::ContextDB, q, qs...) = query(f, db, _datkvec(q, qs...))
+
+query(db::ContextDB, qkvec::Vector) = query(db, qkvec) do 
+    error("The query do not solve any entry")
+end
+query(db::ContextDB, q, qs...) = query(db, _datkvec(q, qs...))
+
+# ------------------------------------------------------------------
+function queryall(db::ContextDB, qkvec::Vector)
+    isempty(db.data) && return db
+    found = OrderedDict{UInt, ContextObj}()
+    qkvec = _build_qkvec(db.label, qkvec)
+    # primer, qkvec = _resolve_primer(db, qkvec)
+    # isnothing(primer) && error("You must set a primer. qkvec ", qkvec)
+    pq = ProductQuery(qkvec)
+    # TODO: make more efficient
+    for q in pq.qs # for each query
+        for (h, obj) in db.data # for each obj
+            if _obj_match(obj, q)
+                setindex!(found, obj, h)
+            end
+        end
+    end
+    isempty(found) && error("The query/context do not match any entry.")
+    return ContextDB(db, found)
+end
+queryall(db::ContextDB, q, qs...) = queryall(db, _datkvec(q, qs...))
+
 ## ---------------------------------------------------------------------
 ## UTILS
 ## ---------------------------------------------------------------------
 
+# resolve the lkvec for context labeling handling
+function _resolve_primer(db::ContextDB, lkvec0::Vector)
+    
+    primer = nothing
+    lkvec = Union{String, Pair}[]
+
+    # check for bookmarks
+    if isa(first(lkvec0), Symbol)
+        primer = first(lkvec0)
+        label0 = bookmark(db, primer)
+        lkvec = _datkvec(label0.vals)
+        for (i, kv) in enumerate(lkvec0)
+            i == 1 && continue
+            push!(lkvec, kv)
+        end
+    end
+
+    # check for context primer
+    if isnothing(primer) && isa(first(lkvec0), String)
+        primer = first(lkvec0)
+        label0 = _datkvec(db.label.vals)
+        for kv in label0
+            primer == _datkey(kv) && break
+            push!(lkvec, kv)
+        end
+        for kv in lkvec0
+            push!(lkvec, kv)
+        end
+    end
+
+    # primerless case
+    if isnothing(primer)
+        label0 = _datkvec(db.label.vals)
+        for kv in label0
+            primer == _datkey(kv) && break
+            push!(lkvec, kv)
+        end
+        for kv in lkvec0
+            push!(lkvec, kv)
+        end
+    end
+    
+    # compact
+    _compact_kvec!(lkvec)
+
+    return primer, lkvec
+end
+
 import Base.isempty
 isempty(db::ContextDB) = isempty(db.data)
+isemptystage(db::ContextDB) = isempty(db.stage)
 
 import Base.lastindex
 lastindex(db::ContextDB) = lastindex(db.data.vals)
@@ -286,14 +459,48 @@ firstindex(db::ContextDB) = firstindex(db.data.vals)
 import Base.length
 length(db::ContextDB) = length(db.data.vals)
 
-function typedcontexts(io::IO, db::ContextDB)
+import Base.collect
+collect(db::ContextDB) = collect(db.data.vals)
+
+function contextlabelkeys(db::ContextDB)
+    # collect
+    contexts = Set{String}()
+    for ctx in values(db.data)
+        push!(contexts, keys(ctx.label)...)
+    end
+    return collect(contexts)
+end
+
+function contextdatakeys(db::ContextDB)
+    # collect
+    contexts = Set{String}()
+    for ctx in values(db.data)
+        push!(contexts, keys(ctx.data)...)
+    end
+    return collect(contexts)
+end
+
+contextobjkeys(db::ContextDB) = union(contextlabelkeys(db), contextdatakeys(db))
+
+function typedcontexts(db::ContextDB)
+    # collect
     contexts = Set([])
     for ctx in values(db.data)
         push!(contexts, _ktype_vec(ctx.label))
     end
+    return collect(contexts)
+end
+
+function showtypedcontexts(io::IO, db::ContextDB)
+    
+    # collect
+    contexts = typedcontexts(db)
+    sort!(contexts; by = length)
+
     # print
+    println(io, "DB Typed Contexts:")
     for vals in contexts
-        print(io, "[")
+        print(io, " [")
         for p in vals
             k, val = _datkey(p), _datval(p)
             if val === :__NOVAL; print(io, repr(k), ", ")
@@ -304,11 +511,14 @@ function typedcontexts(io::IO, db::ContextDB)
     end
 end
 
-typedcontexts(db::ContextDB) = typedcontexts(stdout, db)
+showtypedcontexts(db::ContextDB) = showtypedcontexts(stdout, db)
 
-## ------------------------------------------------------------------
 import Base.show
 function show(io::IO, db::ContextDB)
-    println(io, "ContextDB with ", length(db.data), " contexts")
-    typedcontexts(io, db)
+    println(io, "ContextDB with ", length(db.data), " contextualized objects")
+    showcontext(io, db)
+    showtypedcontexts(io, db)
 end
+
+labelhash(db::ContextDB) = hash(contextlabel(db))
+

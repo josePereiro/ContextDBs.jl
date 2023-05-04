@@ -12,7 +12,7 @@ _datdict(vals::Vector) = Dict(_datkey(v) => _datval(v) for v in vals)
 _datoddict(vals::Vector) = OrderedDict(_datkey(v) => _datval(v) for v in vals)
 
 function _datkvec(vals...; kwargs...)
-    vec = []
+    vec = Union{String, Pair}[]
     for val in vals
         push!(vec, val)
     end
@@ -20,4 +20,14 @@ function _datkvec(vals...; kwargs...)
         push!(vec, string(_datkey(val)) => _datval(val))
     end
     return vec
+end
+
+_datkvec(vals::AbstractDict) = Union{Pair, String}[_datkey(v) => _datval(v) for v in vals]
+
+function _compact_kvec!(kval::Vector)
+    for (i, kv) in enumerate(kval)
+        _datval(kv) == :__NOVAL || continue
+        kval[i] = _datkey(kv)
+    end
+    kval
 end

@@ -28,6 +28,7 @@ _check_tagdb_obj(val) = _check_tagdb_obj_key(val)
 ## ------------------------------------------------------------------
 # OUTPUT
 ## ------------------------------------------------------------------
+contextlabel(e::ContextObj) = ContextLabel(e.label; __checktype = false)
 
 import Base.getindex
 function getindex(e::ContextObj, k::String)
@@ -62,18 +63,22 @@ end
 ## ------------------------------------------------------------------
 # UTILS
 ## ------------------------------------------------------------------
-# import Base.haskey
-# haskey(e::ContextObj, k::String) = haskey(e.label, k) || haskey(e.data, k)
+import Base.haskey
+haskey(e::ContextObj, k::String) = haskey(e.label, k) || haskey(e.data, k)
+
+labelhash(e::ContextObj) = hash(contextlabel(e))
 
 import Base.show
 function show(io::IO, e::ContextObj)
     println(io, "ContextObj")
     
-    print(io, " label      ")
+    println(io, " hash        ", repr(labelhash(e)))
+
+    print(io,   " label       ")
     _print_kval(io, e.label)
     println(io)
 
-    print(io, " data       ")
+    print(io,    " data       ")
     _print_ktype(io, e.data)
     println(io)
 end

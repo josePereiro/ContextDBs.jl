@@ -1,10 +1,30 @@
-# TODOs
+# IDEAS
 # 1. Store context of each new file (eg. plots) so it can be queried later (eg. put a context hash on the plot name)
 # 2. Version nodes. Point for git actions
 # 3. Macro integration for function calls (eg. @save! now())
 # 3. Macro integration for loops
 # 3. Macro integration for Julia scopes (eg. @saveall # save all variables in the scope)
 # 4. Implement InvertedIndices.jl stuff for querying
+
+# ------------------------------------------------------------------
+# IDEAS
+# I want a combination of some level of herarchy and horinzontality into the contexts
+# vcontext (vertical) and an hcontext (horizontal)
+# c1 (vertical)
+# |
+# c2, c3, c4 (horizontal)
+# |
+# c5 (vertical)
+
+# IDEAS
+# Implement an staging interface for accomulating data
+# The context interface is fine, but some times data appears in the scripts before 
+# the contexts is completed, so, the 'save' operation need to be postponded
+
+# IDEAS
+# Have an interface for accessing 'contextual' data. Just as context("exp_time"), 
+# but not only in the context itself, I want to also access data.
+
 
 module ContextDBs
 

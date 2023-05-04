@@ -7,7 +7,7 @@ _check_error(msg::String, v, allowed::Vector) = error(
 
 ## ------------------------------------------------------------------
 function _check_unique_keys(vals)
-    length(Set(_datkey(val)::String for val in vals)) == length(vals) || error("ContextLabel/Query duplicated keys")
+    length(Set(_datkey(val) for val in vals)) == length(vals) || error("ContextLabel/Query duplicated keys")
     return nothing
 end
 

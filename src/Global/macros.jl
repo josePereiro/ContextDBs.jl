@@ -12,6 +12,16 @@ macro emptycontextdb!()
     __emptycontextdb_expr()
 end
 
+function __emptycontextobj_expr()
+    return quote
+        ContextDBs.emptycontextobj!()
+    end
+end
+
+macro emptycontextobj!()
+    __emptycontextobj_expr()
+end
+
 
 ## ---------------------------------------------------------------------
 ## CONTEXT HANDLING
@@ -71,11 +81,11 @@ end
 
 function __typedcontexts_expr()
     return quote
-        ContextDBs.typedcontexts()
+        ContextDBs.showtypedcontexts()
     end
 end
 
-macro typedcontexts()
+macro showtypedcontexts()
     __typedcontexts_expr()
 end
 
@@ -195,7 +205,7 @@ function __tempcontext_expr(ctx_ex, block_ex)
             # exec block
             $(esc(block_ex))
         finally
-            ContextDBs.commit!()
+            ContextDBs.isemptystage() || ContextDBs.commitcontext!()
             ContextDBs.unstashcontext!(_cache_id, true)
         end
     end
@@ -249,20 +259,17 @@ end
 
 function __stage_expr(val_exs...)
     
-    ctx_exv, val_exv = _unpack_first_vec_expr(val_exs...)
-
-    # resolve ctx kvec
-    _ctxv_expr = _collect_and_eval_kvec_expr(ctx_exv)
-    _valv_expr = _collect_and_eval_kvec_expr(val_exv)
-
-    # setval
-    return quote
-        $(_ctxv_expr)
-        local _ctxv = _kvec
-        $(_valv_expr)
-        local _valv = _kvec
-        ContextDBs.stage!(_ctxv, _valv)
+    # unpack
+    exv = _unpack_exprs(val_exs...)
+    # resolve kvec
+    _expr = _collect_and_eval_kvec_expr(exv)
+    # exec context!
+    _expr = quote
+        $(_expr)
+        ContextDBs.stage!(_kvec)
     end
+    return _expr
+    
 end
 
 macro stage!(val_exs...)
@@ -271,6 +278,35 @@ end
 
 ## ---------------------------------------------------------------------
 # COMMIT
+
+function __commitcontext_expr()
+    return quote
+        ContextDBs.commitcontext!()
+    end
+end
+
+macro commitcontext!()
+    __commitcontext_expr()
+end
+
+function __commitcontext_expr(ex)
+    
+    ctx_exv = _unpack_vec_expr_err(ex)
+
+    # resolve ctx kvec
+    _ctxv_expr = _collect_and_eval_kvec_expr(ctx_exv)
+
+    # setval
+    return quote
+        $(_ctxv_expr)
+        local _ctxv = _kvec
+        ContextDBs.commitcontext!(_ctxv)
+    end
+end
+
+macro commitcontext!(ex)
+    __commitcontext_expr(ex)
+end
 
 function __commit_expr(val_exs...)
     
