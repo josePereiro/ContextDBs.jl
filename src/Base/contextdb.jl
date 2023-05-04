@@ -421,15 +421,31 @@ function _resolve_primer(db::ContextDB, lkvec0::Vector)
 
     # resolve context primer
     if isnothing(primer)
-        primer0 = _datkey(first(lkvec0))
-        primer = isa(primer0, String) ? primer0 : nothing
+        primer0 = _datkey(first(lkvec0)) # possible primer
         label0 = _datkvec(db.label.vals)
+
         for kv in label0
-            primer == _datkey(kv) && break
             push!(lkvec, kv)
+            if primer0 == _datkey(kv)
+                # primer found
+                primer = primer0
+                break
+            end
         end
-        for kv in lkvec0
-            push!(lkvec, kv)
+
+        for (i, kv) in enumerate(lkvec0)
+            if isnothing(primer)
+                # No primer, just push
+                push!(lkvec, kv)
+            elseif i == 1 
+                # If primer has an explicit value overwrite
+                if _datval(kv) !== :__NOVAL && !isempty(lkvec)
+                    lkvec[end] = kv
+                end
+            else
+                # push the rest
+                push!(lkvec, kv)
+            end
         end
     end
     

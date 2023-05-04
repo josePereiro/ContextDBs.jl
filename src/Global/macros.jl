@@ -135,6 +135,20 @@ macro unstashlabel!(ex::String)
 end
 
 ## ---------------------------------------------------------------------
+# BOOKMARKS
+
+function __bookmark_expr(ex::QuoteNode)
+    return quote
+        ContextDBs.bookmark!($(esc(ex)))
+    end
+end
+__bookmark_expr(::Any) = error("Expected a symbol literal")
+
+macro bookmark!(ex)
+    __bookmark_expr(ex)
+end
+
+## ---------------------------------------------------------------------
 # CONTEXT STAGE
 
 function __stashstage_expr(ex)

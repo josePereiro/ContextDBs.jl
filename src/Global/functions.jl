@@ -34,6 +34,9 @@ typedcontexts() = typedcontexts(__DB[])
 stashlabel!(k::String) = stashlabel!(__DB[], k)
 unstashlabel!(k::String, del::Bool = false) = unstashlabel!(__DB[], k, del)
 
+bookmark!(k::Symbol) = bookmark!(__DB[], k)
+bookmark(k::Symbol) = bookmark(__DB[], k)
+
 ## ---------------------------------------------------------------------
 # CONTEXT STAGE
 
