@@ -24,45 +24,44 @@ contextlabel(db::ContextDB) = db.label
 ## ---------------------------------------------------------------------
 # SETTER
 
-# function context!(db::ContextDB, lkvec::Vector)
-    
-#     # some checks
-#     isempty(lkvec) && return nothing
-    
-#     # resolve primer
-#     primer, lkvec = _resolve_primer(db, lkvec)
-    
-#     # check contextlabel
-#     foreach(_check_contextlabel, lkvec)
-#     @show lkvec
-#     _check_unique_keys(lkvec)
-    
-#     # set!
-#     empty!(db.label.vals)
-#     for kv in lkvec
-#         _unsafe_setlabel!(db.label, kv)
-#     end
-    
-#     return nothing
-# end
-
-function context!(db::ContextDB, labv::Vector)
+function context!(db::ContextDB, lkvec::Vector)
     
     # some checks
-    isempty(labv) && return db.label
-    foreach(_check_contextlabel, labv)
-
-    # use primer
-    found = _delfrom!(db.label, _datkey(first(labv)))
+    isempty(lkvec) && return nothing
+    
+    # resolve primer
+    primer, lkvec = _resolve_primer(db, lkvec)
+    
+    # check contextlabel
+    foreach(_check_contextlabel, lkvec)
+    _check_unique_keys(lkvec)
     
     # set!
-    for (i, val) in enumerate(labv)
-        found && i == 1 && _datval(val) === :__NOVAL && continue # ignore key only primer
-        _unsafe_setlabel!(db.label, val)
+    empty!(db.label.vals)
+    for kv in lkvec
+        _unsafe_setlabel!(db.label, kv)
     end
     
-    return db.label
+    return nothing
 end
+
+# function context!(db::ContextDB, labv::Vector)
+    
+#     # some checks
+#     isempty(labv) && return db.label
+#     foreach(_check_contextlabel, labv)
+
+#     # use primer
+#     found = _delfrom!(db.label, _datkey(first(labv)))
+    
+#     # set!
+#     for (i, val) in enumerate(labv)
+#         found && i == 1 && _datval(val) === :__NOVAL && continue # ignore key only primer
+#         _unsafe_setlabel!(db.label, val)
+#     end
+    
+#     return db.label
+# end
 
 ## ---------------------------------------------------------------------
 function emptycontextlabel!(db::ContextDB)
@@ -352,9 +351,11 @@ function query(f::Function, db::ContextDB, qkvec::Vector)
     # integrate context
     found = nothing
     
-    qkvec = _build_qkvec(db.label, qkvec)
-    # primer, qkvec = _resolve_primer(db, qkvec)
-    # isnothing(primer) && error("You must set a primer. qkvec ", qkvec)
+    # qkvec = _build_qkvec(db.label, qkvec)
+    
+    primer, qkvec = _resolve_primer(db, qkvec)
+    isnothing(primer) && error("You must set a primer. qkvec ", qkvec)
+
     pq = ProductQuery(qkvec)
     for q in pq.qs # for each query
         for (h, obj) in db.data # for each obj
@@ -377,9 +378,12 @@ query(db::ContextDB, q, qs...) = query(db, _datkvec(q, qs...))
 function queryall(db::ContextDB, qkvec::Vector)
     isempty(db.data) && return db
     found = OrderedDict{UInt, ContextObj}()
-    qkvec = _build_qkvec(db.label, qkvec)
-    # primer, qkvec = _resolve_primer(db, qkvec)
-    # isnothing(primer) && error("You must set a primer. qkvec ", qkvec)
+
+    # qkvec = _build_qkvec(db.label, qkvec)
+
+    primer, qkvec = _resolve_primer(db, qkvec)
+    isnothing(primer) && error("You must set a primer. qkvec ", qkvec)
+
     pq = ProductQuery(qkvec)
     # TODO: make more efficient
     for q in pq.qs # for each query
@@ -402,9 +406,9 @@ queryall(db::ContextDB, q, qs...) = queryall(db, _datkvec(q, qs...))
 function _resolve_primer(db::ContextDB, lkvec0::Vector)
     
     primer = nothing
-    lkvec = Union{String, Pair}[]
+    lkvec = Any[]
 
-    # check for bookmarks
+    # resolve bookmark primer
     if isa(first(lkvec0), Symbol)
         primer = first(lkvec0)
         label0 = bookmark(db, primer)
@@ -415,21 +419,10 @@ function _resolve_primer(db::ContextDB, lkvec0::Vector)
         end
     end
 
-    # check for context primer
-    if isnothing(primer) && isa(first(lkvec0), String)
-        primer = first(lkvec0)
-        label0 = _datkvec(db.label.vals)
-        for kv in label0
-            primer == _datkey(kv) && break
-            push!(lkvec, kv)
-        end
-        for kv in lkvec0
-            push!(lkvec, kv)
-        end
-    end
-
-    # primerless case
+    # resolve context primer
     if isnothing(primer)
+        primer0 = _datkey(first(lkvec0))
+        primer = isa(primer0, String) ? primer0 : nothing
         label0 = _datkvec(db.label.vals)
         for kv in label0
             primer == _datkey(kv) && break
