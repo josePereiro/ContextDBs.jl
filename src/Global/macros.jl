@@ -391,10 +391,11 @@ end
 _unpack_exprs(exs...) = collect(exs)
 
 ## ---------------------------------------------------------------------
-# From an 'atomic' expression extract the key
+# From an 'atomic' expression extract the key and a value parser
 _parse_kv_expr(ex::Symbol) = (string(ex), identity)
 _parse_kv_expr(ex::String) = (ex, (x) -> :__NOVAL)
-_parse_kv_expr(ex) = (nothing, nothing)
+# _parse_kv_expr(ex::QuoteNode) = (ex.value, (x) -> nothing)
+_parse_kv_expr(::Any) = (nothing, nothing)
 function _parse_kv_expr(ex::Expr)
     _key = nothing
     _val_parser = nothing # extract val from the exec value
@@ -420,9 +421,9 @@ function _parse_kv_expr(ex::Expr)
 end
 
 function _parse_kv_expr_err(ex)
-    _key = _parse_kv_expr(ex)
+    _key, _val_parser = _parse_kv_expr(ex)
     isnothing(_key) && error("The expression is too complex ;(")
-    return _key
+    return _key, _val_parser
 end
 
 ## ---------------------------------------------------------------------

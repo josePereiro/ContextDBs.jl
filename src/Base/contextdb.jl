@@ -522,11 +522,41 @@ end
 
 showtypedcontexts(db::ContextDB) = showtypedcontexts(stdout, db)
 
+function typedcontextdata(db::ContextDB)
+    # collect
+    contexts = Set([])
+    for ctx in values(db.data)
+        push!(contexts, _ktype_vec(ctx.data))
+    end
+    return collect(contexts)
+end
+
+function showtypedcontextdata(io::IO, db::ContextDB)
+    
+    # collect
+    tdata = typedcontextdata(db)
+    sort!(tdata; by = length)
+
+    # print
+    println(io, "DB Typed Context Data:")
+    for vals in tdata
+        print(io, " [")
+        for p in vals
+            k, val = _datkey(p), _datval(p)
+            print(io, repr(k), " => ::", repr(val), ", ")
+        end
+        println(io, "]")
+    end
+end
+
+showtypedcontextdata(db::ContextDB) = showtypedcontextdata(stdout, db)
+
 import Base.show
 function show(io::IO, db::ContextDB)
     println(io, "ContextDB with ", length(db.data), " contextualized objects")
     showcontext(io, db)
     showtypedcontexts(io, db)
+    showtypedcontextdata(io, db)
 end
 
 labelhash(db::ContextDB) = hash(contextlabel(db))

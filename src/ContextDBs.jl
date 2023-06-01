@@ -23,13 +23,14 @@
 
 # IDEAS
 # Have an interface for accessing 'contextual' data. Just as context("exp_time"), 
-# but not only in the context itself, I want to also access data.
+# but not only in the context itself, I want to also access staged/commited data.
 
 
 module ContextDBs
 
     using Dates
     using OrderedCollections
+    using Serialization
     
     import Base: @locals
 
@@ -40,8 +41,10 @@ module ContextDBs
     include("Types/2_ContextObj.jl")
     include("Types/3_ProductQuery.jl")
     include("Types/4_ContextDB.jl")
+    include("Types/5_CacheRef.jl")
 
     #! include Base
+    include("Base/cacheref.jl")
     include("Base/contextdb.jl")
     include("Base/contextlabel.jl")
     include("Base/contextobj.jl")
@@ -51,6 +54,7 @@ module ContextDBs
     include("Base/utils.jl")
 
     #! include Global
+    include("Global/cacheref.jl")
     include("Global/functions.jl")
     include("Global/globals.jl")
     include("Global/macros.jl")

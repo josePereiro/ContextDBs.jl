@@ -78,7 +78,7 @@ function show(io::IO, e::ContextObj)
     _print_kval(io, e.label)
     println(io)
 
-    print(io,    " data       ")
+    print(io,   " data        ")
     _print_ktype(io, e.data)
     println(io)
 end
