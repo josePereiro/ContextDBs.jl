@@ -22,6 +22,33 @@ macro emptycontextobj!()
     __emptycontextobj_expr()
 end
 
+function __newcontextdb_expr()
+    return quote
+        ContextDBs.newcontextdb!()
+    end
+end
+
+macro newcontextdb!()
+    __newcontextdb_expr()
+end
+
+function __tempcontextdb_expr(block_ex)
+    return quote
+        local _old_db = ContextDBs.contextdb()
+        try
+            local _new_db = ContextDBs.newcontextdb!()
+            # exec block
+            $(esc(block_ex))
+        finally
+            ContextDBs.contextdb!(_old_db)
+        end
+    end
+end
+
+macro tempcontextdb(ex)
+    block_ex = _block_expr_err(ex)
+    __tempcontextdb_expr(block_ex)
+end
 
 ## ---------------------------------------------------------------------
 ## CONTEXT HANDLING

@@ -12,6 +12,22 @@ function emptycontextdb!()
 end
 
 emptycontextobj!() = emptycontextobj!(__DB[])
+function newcontextdb!()
+    db = ContextDB()
+    __DB[] = db
+    return db
+end
+
+function tempcontextdb(f::Function)
+    _old_db = contextdb()
+    try
+        db = newcontextdb!()
+        f()
+        return db
+    finally
+        contextdb!(_old_db)
+    end
+end
 
 ## ---------------------------------------------------------------------
 ## CONTEXT LABEL HANDLING
