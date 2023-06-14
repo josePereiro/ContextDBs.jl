@@ -35,13 +35,17 @@ end
 function __tempcontextdb_expr(block_ex)
     return quote
         local _old_db = ContextDBs.contextdb()
-        try
-            local _new_db = ContextDBs.newcontextdb!()
-            # exec block
-            $(esc(block_ex))
-        finally
-            ContextDBs.contextdb!(_old_db)
-        end
+        ContextDBs.@__tryfinally(
+            begin
+                local _new_db = ContextDBs.newcontextdb!()
+                # exec block
+                $(esc(block_ex))
+            end,
+            # finally
+            begin
+                ContextDBs.contextdb!(_old_db)
+            end
+        )
     end
 end
 
@@ -240,16 +244,21 @@ function __tempcontext_expr(ctx_ex, block_ex)
     _expr = quote
         $(_expr)
         local _cache_id = string(time())
-        try
-            ContextDBs.stashcontext!(_cache_id)
-            ContextDBs.context!(_kvec)
-            # exec block
-            $(esc(block_ex))
-        finally
-            ContextDBs.isemptystage() || ContextDBs.commitcontext!()
-            ContextDBs.unstashcontext!(_cache_id, true)
-        end
+        ContextDBs.@__tryfinally(
+            begin
+                ContextDBs.stashcontext!(_cache_id)
+                ContextDBs.context!(_kvec)
+                # exec block
+                $(esc(block_ex))
+            end, 
+            # finally
+            begin
+                ContextDBs.isemptystage() || ContextDBs.commitcontext!()
+                ContextDBs.unstashcontext!(_cache_id, true)
+            end
+        )
     end
+    # @show _expr
     return _expr
 end
 
@@ -272,14 +281,18 @@ function __tempcontextlabel_expr(ctx_ex, block_ex)
     _expr = quote
         $(_expr)
         local _cache_id = string(time())
-        try
-            ContextDBs.stashlabel!(_cache_id)
-            ContextDBs.context!(_kvec)
-            # exec block
-            $(esc(block_ex))
-        finally
-            ContextDBs.unstashlabel!(_cache_id, true)
-        end
+        ContextDBs.@__tryfinally(
+            begin
+                ContextDBs.stashlabel!(_cache_id)
+                ContextDBs.context!(_kvec)
+                # exec block
+                $(esc(block_ex))
+            end,
+            # finally
+            begin
+                ContextDBs.unstashlabel!(_cache_id, true)
+            end
+        )
     end
     return _expr
 end
@@ -375,6 +388,16 @@ end
 ## ---------------------------------------------------------------------
 ## MACROS UTILS
 ## ---------------------------------------------------------------------
+
+# FROM Base/timing.jl
+# NOTE: This is deprecated and should not be used from user logic. A proper solution to
+# this problem will be introduced in https://github.com/JuliaLang/julia/pull/39217
+macro __tryfinally(ex, fin)
+    Expr(:tryfinally,
+       :($(esc(ex))),
+       :($(esc(fin)))
+    )
+end
 
 ## ---------------------------------------------------------------------
 # return the expr if it is a block
