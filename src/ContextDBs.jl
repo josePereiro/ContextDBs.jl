@@ -25,6 +25,17 @@
 # Have an interface for accessing 'contextual' data. Just as context("exp_time"), 
 # but not only in the context itself, I want to also access staged/commited data.
 
+# IDEAS
+# Add an autoreport folder to ProjFlow dir tree.
+# There, all plots, annotations, context will be collected into an automatic document.
+
+# IDEAS
+# Have a recent interface so I can access the last commited context with a given label.
+# This is good for fast chaining workflow stages.
+
+# IDEAS
+# Nested contexts: A set of data related from a context subset must be access from a superset.
+# Ex: Given ["Bla"] => [A = 1], A must be accessible from ["Blo", "Bla"]
 
 module ContextDBs
 
