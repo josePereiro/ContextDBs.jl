@@ -43,8 +43,13 @@ import Base.hash
 # The order of the context labels should not matter hash(["BLA", "BLO" => 1]) == hash(["BLO" => 1, "BLA"])
 function hash(l::ContextLabel, h::UInt)
     h = hash(:ContextLabel, h)
-    for v in l.vals
-        h += hash(v)
+    # keys
+    for k in keys(l.vals)
+        h = hash(k, h)
+    end
+    # vals
+    for v in values(l.vals)
+        h = hash(v, h)
     end
     return h
 end
