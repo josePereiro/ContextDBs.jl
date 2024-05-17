@@ -13,7 +13,7 @@ _check_contextlabel_key(k) = _check_error("context label key", k, _CONTEXTLABEL_
 
 ## ------------------------------------------------------------------
 # The reduce allowed types are to help hygine
-_CONTEXTLABEL_VAL_ALLOWED_TYPES = [String, Bool, Int, Float64, Symbol, DateTime, VersionNumber, Nothing]
+_CONTEXTLABEL_VAL_ALLOWED_TYPES = [String, Number, Symbol, DateTime, VersionNumber, Nothing]
 
 for T in _CONTEXTLABEL_VAL_ALLOWED_TYPES
     @eval _check_contextlabel_val(::$T) = nothing
@@ -43,14 +43,13 @@ import Base.hash
 # The order of the context labels should not matter hash(["BLA", "BLO" => 1]) == hash(["BLO" => 1, "BLA"])
 function hash(l::ContextLabel, h::UInt)
     h = hash(:ContextLabel, h)
-    # keys
-    for k in keys(l.vals)
-        h = hash(k, h)
+    # element hashes
+    _pairs_hs = zeros(UInt, length(l.vals))
+    for (i, (k, v)) in enumerate(l.vals)
+        _pairs_hs[i] = hash(v, hash(k, h))
     end
-    # vals
-    for v in values(l.vals)
-        h = hash(v, h)
-    end
+    sort!(_pairs_hs)
+    h = hash(_pairs_hs, h)
     return h
 end
 hash(l::ContextLabel, i::Int) = hash(l, UInt(i))
